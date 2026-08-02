@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://m39-yol-yordam.vercel.app/sitemap.xml
