@@ -1,16 +1,21 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getAuth, signInAnonymously } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyA_uezVSt3VtUjoGFTqWpDeq-FVgew9KdQ",
+  authDomain: "m39-yol-yordam.firebaseapp.com",
+  projectId: "m39-yol-yordam",
+  storageBucket: "m39-yol-yordam.firebasestorage.app",
+  messagingSenderId: "68085950154",
+  appId: "1:68085950154:web:d765b53ec71d7195fc3633"
 };
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+
+// Avtomatik anonim kirish
+signInAnonymously(auth).catch((error) => {
+  console.error("Auth error:", error);
+});
