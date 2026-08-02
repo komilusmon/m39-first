@@ -1,5 +1,14 @@
 import { db } from './firebase';
-import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, serverTimestamp, enableIndexedDbPersistence } from 'firebase/firestore';
+
+// Offline rejim
+if (typeof window !== 'undefined') {
+  enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+      console.warn('Persistence failed');
+    }
+  });
+}
 
 export interface EmergencyRequest {
   id?: string;
@@ -60,35 +69,44 @@ export async function sendEmergencyRequest(data: Omit<EmergencyRequest, 'id' | '
 
 // Ustaxonalarni olish
 export async function getWorkshops() {
-  const querySnapshot = await getDocs(collection(db, 'workshops'));
-  return querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  })) as Workshop[];
+  try {
+    const querySnapshot = await getDocs(collection(db, 'workshops'));
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Workshop[];
+  } catch (error) {
+    console.error('Error getting workshops:', error);
+    return [];
+  }
 }
 
 // Radarlarni olish
 export async function getRadars() {
-  const querySnapshot = await getDocs(collection(db, 'radars'));
-  return querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  })) as Radar[];
+  try {
+    const querySnapshot = await getDocs(collection(db, 'radars'));
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Radar[];
+  } catch (error) {
+    console.error('Error getting radars:', error);
+    return [];
+  }
 }
 
 // Yaqin yordam so'rash
 export async function findNearbyHelp(lat: number, lng: number) {
   const workshops = await getWorkshops();
-  // Masofani hisoblash funksiyasi
   const nearby = workshops.filter(workshop => {
     const distance = calculateDistance(lat, lng, workshop.location.lat, workshop.location.lng);
-    return distance < 50; // 50 km ichida
+    return distance < 50;
   });
   return nearby;
 }
 
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371; // Yer radiusi km
+  const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
