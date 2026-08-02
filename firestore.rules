@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Barcha foydalanuvchilar o'qishi mumkin
+    match /{document=**} {
+      allow read: if true;
+    }
+    
+    // Emergency requests - faqat yaratish va statusni yangilash
+    match /emergency_requests/{requestId} {
+      allow create: if request.resource.data.status == 'waiting'
+                   && request.resource.data.phone is string
+                   && request.resource.data.carModel is string
+                   && request.resource.data.description is string;
+      
+      allow update: if request.resource.data.status in ['accepted', 'completed']
+                   && request.resource.data.helpers is list;
+    }
+    
+    // Workshops - faqat o'qish
+    match /workshops/{workshopId} {
+      allow read: if true;
+      allow create, update, delete: if false; // Admin qo'lda kiritadi
+    }
+    
+    // Radars - faqat o'qish
+    match /radars/{radarId} {
+      allow read: if true;
+      allow create, update, delete: if false; // Admin qo'lda kiritadi
+    }
+    
+    // Advertisements (reklamalar)
+    match /advertisements/{adId} {
+      allow read: if resource.data.active == true;
+      allow create, update, delete: if false;
+    }
+  }
+}
