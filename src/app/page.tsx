@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+import { sendEmergencyRequest } from '@/lib/database';
 
 export default function Home() {
   const [location, setLocation] = useState<{lat: number; lng: number} | null>(null);
@@ -13,7 +14,6 @@ export default function Home() {
   });
 
   useEffect(() => {
-    // Geolokatsiyani so'rash
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -22,39 +22,65 @@ export default function Home() {
             lng: position.coords.longitude
           });
         },
-        (error) => {
-          console.error('Geolokatsiya xatosi:', error);
-          // M39 yo'lining markaziy nuqtasi
+        () => {
           setLocation({ lat: 40.7128, lng: 64.5761 });
         }
       );
     }
   }, []);
 
-  const handleSOS = () => {
+  const handleSOS = async () => {
     if (!formData.phone || !formData.carModel || !formData.description) {
       toast.error('Iltimos, barcha maydonlarni to\'ldiring!');
       return;
     }
 
-    // Bu yerda yordam chaqiruv funksiyasi
-    toast.success('Yordam so\'rovingiz qabul qilindi! Tez orada aloqaga chiqamiz.');
-    setShowSOS(false);
-    setFormData({ phone: '', carModel: '', description: '' });
+    if (!location) {
+      toast.error('Joylashuv aniqlanmadi!');
+      return;
+    }
+
+    try {
+      await sendEmergencyRequest({
+        location: {
+          lat: location.lat,
+          lng: location.lng,
+          address: 'M39 yo\'li'
+        },
+        phone: formData.phone,
+        carModel: formData.carModel,
+        description: formData.description
+      });
+
+      toast.success('Yordam so\'rovingiz qabul qilindi!');
+      setShowSOS(false);
+      setFormData({ phone: '', carModel: '', description: '' });
+    } catch (error) {
+      toast.error('Xatolik yuz berdi. Qayta urinib ko\'ring.');
+    }
   };
 
   const handleShareLocation = () => {
     if (location) {
-      const text = `Menga yordam kerak! Manzil: https://www.google.com/maps?q=${location.lat},${location.lng}`;
+      const googleMapsUrl = `https://www.google.com/maps?q=${location.lat},${location.lng}`;
+      const text = `Menga yordam kerak! Manzilim: ${googleMapsUrl}`;
       
-      // Telegram orqali ulashish
-      window.open(`https://t.me/share/url?url=${encodeURIComponent(text)}`, '_blank');
+      if (navigator.share) {
+        navigator.share({
+          title: 'Yordam kerak',
+          text: text,
+          url: googleMapsUrl
+        }).catch(() => {
+          window.open(`https://t.me/share/url?url=${encodeURIComponent(text)}`, '_blank');
+        });
+      } else {
+        window.open(`https://t.me/share/url?url=${encodeURIComponent(text)}`, '_blank');
+      }
     }
   };
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Header */}
       <header className="bg-blue-600 text-white p-4 shadow-lg">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div>
@@ -69,7 +95,6 @@ export default function Home() {
       </header>
 
       <div className="max-w-6xl mx-auto p-4">
-        {/* SOS Tugma */}
         <div className="text-center my-8">
           <button
             onClick={() => setShowSOS(true)}
@@ -82,20 +107,19 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Tezkor xizmatlar */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-8">
           <div className="card">
             <div className="text-4xl mb-2">🔧</div>
             <h3 className="font-bold text-lg">Ustaxonalar</h3>
             <p className="text-gray-600 text-sm">Yaqin ustaxonalarni topish</p>
-            <button className="btn-primary mt-3 w-full">Ko'rish</button>
+            <a href="/workshops" className="btn-primary mt-3 block text-center">Ko'rish</a>
           </div>
 
           <div className="card">
             <div className="text-4xl mb-2">📡</div>
             <h3 className="font-bold text-lg">Radarlar</h3>
             <p className="text-gray-600 text-sm">Yo'l radarlari xaritasi</p>
-            <button className="btn-primary mt-3 w-full">Xaritada ko'rish</button>
+            <a href="/radars" className="btn-primary mt-3 block text-center">Xaritada ko'rish</a>
           </div>
 
           <div className="card">
@@ -111,14 +135,12 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Reklama joyi */}
         <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-8 my-8 text-center">
           <p className="text-gray-500 text-sm">📢 Reklama uchun joy</p>
           <p className="text-gray-400 text-xs mt-1">Google AdSense kodi shu yerga</p>
         </div>
       </div>
 
-      {/* SOS Modal */}
       {showSOS && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
